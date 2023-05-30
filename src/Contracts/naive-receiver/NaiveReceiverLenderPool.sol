@@ -29,6 +29,9 @@ contract NaiveReceiverLenderPool is ReentrancyGuard {
         // Transfer ETH and handle control to receiver
         borrower.functionCallWithValue(abi.encodeWithSignature("receiveEther(uint256)", FIXED_FEE), borrowAmount);
 
+
+        /// FLASH LOAN HAPPENING HERE ///
+
         if (address(this).balance < balanceBefore + FIXED_FEE) {
             revert FlashLoanHasNotBeenPaidBack();
         }
